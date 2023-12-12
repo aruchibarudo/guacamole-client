@@ -1,0 +1,64 @@
+services:
+  ldap:
+    image: ${REGISTRY}thoteam/slapd-server-mock
+    environmnent:
+      LDAP_DOMAIN: ${LDAP_DOMAIN:-mock.local}
+      LDAP_ORGANISATION: ${LDAP_ORGANISATION:-Mock Corp}
+      LDAP_SECRET: ${LDAP_SECRET}
+    networks:
+      - guacamole
+  db:
+    image: ${REGISTRY}postgres
+    networks:
+      - guacamole
+    environment:
+      POSTGRES_DB: ${POSTGRES_DATABASE:-guacamole_db}
+      POSTGRES_USER: ${POSTGRES_USER:-guacamole}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+      - ./initdb/initdb.sql:/docker-entrypoint-initdb.d/gaucamole.sql:ro
+    depends_on:
+      - guac_initdb
+
+  guacd:
+    image: ${REGISTRY}guacamole/guacd:${GUAC_VERSION:-1.5.4}
+    networks:
+      - guacamole
+
+  guacamole:
+    image: ${REGISTRY}guacamole/guacamole:${GUAC_VERSION:-1.5.4}
+    networks:
+      - guacamole
+    environment:
+      GUACD_HOSTNAME: ${GUACD_HOSTNAME:-guacd}
+      GUACD_PORT: ${GUACD_PORT:-4822}
+      POSTGRES_HOSTNAME: ${POSTGRES_HOSTNAME:-db}
+      POSTGRES_DATABASE: ${POSTGRES_DATABASE:-guacamole}
+      POSTGRES_USER: ${POSTGRES_USER:-guacamole}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      LDAP_HOSTNAME: ${LDAP_HOSTNAME:-ldap}
+      LDAP_USER_BASE_DN: ${LDAP_USER_BASE_DN:-dc=mock,dc=local}
+      LDAP_GROUP_SEARCH_FILTER: ${LDAP_GROUP_SEARCH_FILTER}
+      LDAP_MEMBER_ATTRIBUTE: ${LDAP_MEMBER_ATTRIBUTE:-dn}
+      LDAP_SEARCH_BIND_DN: ${LDAP_SEARCH_BIND_DN:-cn=admin,dc=mock,dc=local}
+      LDAP_SEARCH_BIND_PASSWORD: ${LDAP_SEARCH_BIND_PASSWORD:-${LDAP_SECRET}}
+      LDAP_USERNAME_ATTRIBUTE: ${LDAP_USERNAME_ATTRIBUTE:-uid}
+      LDAP_FOLLOW_REFERRALS: ${LDAP_FOLLOW_REFERRALS:-false}
+    ports:
+      - 8080:${GUACAMOLE_PORT:-8080}
+    depends_on:
+      - guacd
+      - db
+      - ldap
+
+  guac_initdb:
+    image: ${REGISTRY}guacamole/guacamole:${GUAC_VERSION:-1.5.4}
+    user: 1001:1001
+    restart: no
+    volumes:
+      - ./initdb:/tmp/initdb
+    command: ["/bin/bash", "-c", "/opt/guacamole/bin/initdb.sh --postgresql > /tmp/initdb/initdb.sql"]
+
+networks:
+  guacamole:

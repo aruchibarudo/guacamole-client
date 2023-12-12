@@ -184,6 +184,9 @@ angular.module('login').directive('guacLogin', [function guacLogin() {
             // Start with cleared status
             $scope.loginError = null;
 
+            // FIX DB auth case sensitive username. Force username to lower case
+            $scope.enteredValues['username'] = $scope.enteredValues['username'].toLowerCase()
+
             // Attempt login once existing session is destroyed
             authenticationService.authenticate($scope.enteredValues)
 
