@@ -185,7 +185,10 @@ angular.module('login').directive('guacLogin', [function guacLogin() {
             $scope.loginError = null;
 
             // FIX DB auth case sensitive username. Force username to lower case
-            $scope.enteredValues['username'] = $scope.enteredValues['username'].toLowerCase()
+            angular.forEach($scope.remainingFields, function clearEnteredValueIfPassword(field) {
+                if (field.type === Field.Type.USERNAME && field.name in $scope.enteredValues)
+                    $scope.enteredValues[field.name] = $scope.enteredValues[field.name].toLowerCase();
+            });
 
             // Attempt login once existing session is destroyed
             authenticationService.authenticate($scope.enteredValues)
